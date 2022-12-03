@@ -6,11 +6,13 @@ import (
 	"os"
 	"sort"
 	"strconv"
+
+	"github.com/babbageclunk/advent2022/lib"
 )
 
 func main() {
 	file, err := os.Open("day1.txt")
-	check(err)
+	lib.Check(err)
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
@@ -25,7 +27,7 @@ func main() {
 			continue
 		}
 		val, err := strconv.Atoi(line)
-		check(err)
+		lib.Check(err)
 		total += val
 	}
 
@@ -36,10 +38,4 @@ func main() {
 		sum += v
 	}
 	fmt.Println("top 3 sum", sum)
-}
-
-func check(err error) {
-	if err != nil {
-		panic(err)
-	}
 }
