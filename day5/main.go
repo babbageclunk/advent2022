@@ -10,28 +10,37 @@ import (
 func main() {
 	lines := lib.ReadLines("input")
 	stacks, rest := readCrates(lines)
+	stacks2 := stacks.clone()
 	moves := readMoves(rest)
 	for _, m := range moves {
 		m.apply(stacks)
+		m.apply2(stacks2)
 	}
-	for _, stack := range stacks {
-		fmt.Printf("%s", stack[len(stack)-1])
-	}
-	fmt.Println()
+	fmt.Println(stacks.dumpTops())
+	fmt.Println(stacks2.dumpTops())
 }
 
 type stacks [][]string
 
+func (s stacks) clone() stacks {
+	result := make(stacks, len(s))
+	for i, stack := range s {
+		result[i] = make([]string, len(stack))
+		copy(result[i], stack)
+	}
+	return result
+}
+
+func (s stacks) dumpTops() string {
+	result := make([]string, len(s))
+	for i, stack := range s {
+		result[i] = stack[len(stack)-1]
+	}
+	return strings.Join(result, "")
+}
+
 type move struct {
 	n, from, to int
-}
-
-func pop(items []string) (string, []string) {
-	return items[len(items)-1], items[:len(items)-1]
-}
-
-func push(items []string, item string) []string {
-	return append(items, item)
 }
 
 func (m move) apply(s stacks) {
@@ -40,6 +49,20 @@ func (m move) apply(s stacks) {
 		item, s[m.from] = pop(s[m.from])
 		s[m.to] = push(s[m.to], item)
 	}
+}
+
+func (m move) apply2(s stacks) {
+	items := s[m.from][len(s[m.from])-m.n:]
+	s[m.from] = s[m.from][:len(s[m.from])-m.n]
+	s[m.to] = append(s[m.to], items...)
+}
+
+func pop(items []string) (string, []string) {
+	return items[len(items)-1], items[:len(items)-1]
+}
+
+func push(items []string, item string) []string {
+	return append(items, item)
 }
 
 func readCrates(lines []string) (stacks, []string) {
