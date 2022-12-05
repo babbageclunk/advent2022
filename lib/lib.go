@@ -14,7 +14,7 @@ func Read(filename string) string {
 
 func ReadLines(filename string) []string {
 	data := Read(filename)
-	return strings.Split(strings.TrimSpace(data), "\n")
+	return strings.Split(strings.TrimRight(data, "\n"), "\n")
 }
 
 func Check(err error) {
