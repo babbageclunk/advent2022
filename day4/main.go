@@ -9,16 +9,21 @@ import (
 
 func main() {
 	lines := lib.ReadLines("input")
-	total := 0
+	contained := 0
+	overlaps := 0
 	for _, line := range lines {
 		parts := strings.Split(line, ",")
 		a := ParseRange(parts[0])
 		b := ParseRange(parts[1])
 		if a.ContainsRange(b) || b.ContainsRange(a) {
-			total++
+			contained++
+		}
+		if a.Overlaps(b) {
+			overlaps++
 		}
 	}
-	fmt.Println(total)
+	fmt.Println("contained", contained)
+	fmt.Println("overlaps", overlaps)
 }
 
 func ParseRange(s string) Range {
@@ -39,4 +44,8 @@ func (r Range) Contains(n int) bool {
 
 func (r Range) ContainsRange(other Range) bool {
 	return r.Contains(other.start) && r.Contains(other.end)
+}
+
+func (r Range) Overlaps(other Range) bool {
+	return r.Contains(other.start) || r.Contains(other.end) || r.ContainsRange(other) || other.ContainsRange(r)
 }
