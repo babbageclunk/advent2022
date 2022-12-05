@@ -1,6 +1,10 @@
 package lib
 
-import "io/ioutil"
+import (
+	"io/ioutil"
+	"strconv"
+	"strings"
+)
 
 func Read(filename string) string {
 	data, err := ioutil.ReadFile(filename)
@@ -8,10 +12,21 @@ func Read(filename string) string {
 	return string(data)
 }
 
+func ReadLines(filename string) []string {
+	data := Read(filename)
+	return strings.Split(strings.TrimSpace(data), "\n")
+}
+
 func Check(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func ParseInt(s string) int {
+	n, err := strconv.Atoi(s)
+	Check(err)
+	return n
 }
 
 type Set[T comparable] map[T]struct{}
