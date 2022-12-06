@@ -8,17 +8,18 @@ import (
 
 func main() {
 	data := lib.Read("input")
-	fmt.Println(detectStart(data))
+	fmt.Println(detectStart(data, 4))
+	fmt.Println(detectStart(data, 14))
 }
 
-func detectStart(data string) int {
+func detectStart(data string, size int) int {
 	runes := []rune(data)
-	startChunk := runes[:4]
+	startChunk := runes[:size]
 	buf := lib.NewRingBufferFrom(startChunk)
 	distinct := lib.NewBagFrom(startChunk)
 	pos := len(startChunk)
 	for pos < len(runes) {
-		if distinct.Len() == 4 {
+		if distinct.Len() == size {
 			return pos
 		}
 		new := runes[pos]
