@@ -69,3 +69,46 @@ func (s Set[T]) Intersect(other Set[T]) Set[T] {
 	}
 	return result
 }
+
+type Bag[T comparable] map[T]int
+
+func NewBagFrom[T comparable](vs []T) Bag[T] {
+	result := make(Bag[T])
+	for _, v := range vs {
+		result.Add(v)
+	}
+	return result
+}
+
+func (b Bag[T]) Add(v T) {
+	b[v]++
+}
+
+func (b Bag[T]) Remove(v T) {
+	if b[v] > 0 {
+		b[v]--
+	}
+	if b[v] == 0 {
+		delete(b, v)
+	}
+}
+
+func (b Bag[T]) Len() int {
+	return len(b)
+}
+
+type RingBuffer[T any] struct {
+	items []T
+	pos   int
+}
+
+func NewRingBufferFrom[T any](vs []T) *RingBuffer[T] {
+	return &RingBuffer[T]{items: vs, pos: 0}
+}
+
+func (r *RingBuffer[T]) Push(v T) T {
+	result := r.items[r.pos]
+	r.items[r.pos] = v
+	r.pos = (r.pos + 1) % len(r.items)
+	return result
+}
