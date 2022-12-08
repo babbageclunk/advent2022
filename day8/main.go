@@ -10,14 +10,21 @@ func main() {
 	lines := lib.ReadLines("input")
 	trees := readMap(lines)
 	count := 0
+	best := 0
 	for x := 0; x < trees.width(); x++ {
 		for y := 0; y < trees.height(); y++ {
-			if trees.visible(Point{x, y}) {
+			p := Point{x, y}
+			if trees.visible(p) {
 				count++
+			}
+			score := trees.score(p)
+			if score > best {
+				best = score
 			}
 		}
 	}
-	fmt.Println(count)
+	fmt.Println("visible from outside", count)
+	fmt.Println("best score", best)
 }
 
 type treeMap [][]int
@@ -35,28 +42,40 @@ func (t treeMap) at(p Point) int {
 }
 
 func (t treeMap) contains(p Point) bool {
-	return p.x >= 0 && p.x < len(t[0]) && p.y >= 0 && p.y < len(t)
+	return p.x >= 0 && p.x < t.width() && p.y >= 0 && p.y < t.height()
 }
 
-func (t treeMap) visibleInDir(p, dir Point) bool {
+func (t treeMap) visibleInDir(p, dir Point) (bool, int) {
 	val := t.at(p)
 	cur := p.add(dir)
+	seen := 1
 	for t.contains(cur) {
 		if t.at(cur) >= val {
-			return false
+			return false, seen
 		}
 		cur = cur.add(dir)
+		seen++
 	}
-	return true
+	return true, seen - 1 // -1 because we fell off the map.
 }
 
 func (t treeMap) visible(p Point) bool {
 	for _, dir := range directions {
-		if t.visibleInDir(p, dir) {
+		v, _ := t.visibleInDir(p, dir)
+		if v {
 			return true
 		}
 	}
 	return false
+}
+
+func (t treeMap) score(p Point) int {
+	result := 1
+	for _, dir := range directions {
+		_, seen := t.visibleInDir(p, dir)
+		result *= seen
+	}
+	return result
 }
 
 var directions = []Point{
