@@ -112,3 +112,18 @@ func (r *RingBuffer[T]) Push(v T) T {
 	r.pos = (r.pos + 1) % len(r.items)
 	return result
 }
+
+type Point struct {
+	X, Y int
+}
+
+func (p Point) Add(o Point) Point {
+	return Point{p.X + o.X, p.Y + o.Y}
+}
+
+var Directions = []Point{
+	{-1, 0},
+	{0, -1},
+	{1, 0},
+	{0, 1},
+}
