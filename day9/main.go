@@ -8,13 +8,15 @@ import (
 )
 
 func main() {
-	rope := Rope{seen: lib.NewSet[lib.Point]()}
-	rope.seen.Add(lib.Point{X: 0, Y: 0})
+	rope2 := NewRope(2)
+	rope10 := NewRope(10)
 	for _, line := range lib.ReadLines("input") {
 		move := readMove(line)
-		rope.apply(move)
+		rope2.apply(move)
+		rope10.apply(move)
 	}
-	fmt.Println(rope.seen.Len())
+	fmt.Println(rope2.seen.Len())
+	fmt.Println(rope10.seen.Len())
 }
 
 var dirNames = map[string]lib.Point{
@@ -24,9 +26,16 @@ var dirNames = map[string]lib.Point{
 	"U": lib.Directions[3],
 }
 
+func NewRope(n int) *Rope {
+	return &Rope{
+		parts: make([]lib.Point, n),
+		seen:  lib.NewSet[lib.Point](),
+	}
+}
+
 type Rope struct {
-	head, tail lib.Point
-	seen       lib.Set[lib.Point]
+	parts []lib.Point
+	seen  lib.Set[lib.Point]
 }
 
 func (r *Rope) apply(m Move) {
@@ -36,22 +45,30 @@ func (r *Rope) apply(m Move) {
 }
 
 func (r *Rope) step(dir lib.Point) {
-	r.head = r.head.Add(dir)
-	r.moveTail()
+	r.parts[0] = r.parts[0].Add(dir)
+	r.moveTails()
 }
 
-func (r *Rope) moveTail() {
-	dx := r.head.X - r.tail.X
-	dy := r.head.Y - r.tail.Y
+func (r *Rope) moveTails() {
+	for i := 1; i < len(r.parts); i++ {
+		r.moveTail(i)
+	}
+	r.seen.Add(r.parts[len(r.parts)-1])
+}
+
+func (r *Rope) moveTail(n int) {
+	prev := r.parts[n-1]
+	this := r.parts[n]
+	dx := prev.X - this.X
+	dy := prev.Y - this.Y
 	if abs(dx) < 2 && abs(dy) < 2 {
 		return
 	}
-	tailMove := lib.Point{
+	move := lib.Point{
 		X: sign(dx),
 		Y: sign(dy),
 	}
-	r.tail = r.tail.Add(tailMove)
-	r.seen.Add(r.tail)
+	r.parts[n] = this.Add(move)
 }
 
 func abs(val int) int {
