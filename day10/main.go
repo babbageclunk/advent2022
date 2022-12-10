@@ -26,11 +26,13 @@ type CPU struct {
 
 	SampleTimes  lib.Set[int]
 	SampleValues []int
+	Pixels       []rune
 }
 
 func (c *CPU) advance(n int) {
 	for i := 0; i < n; i++ {
 		c.Time++
+		c.pixel()
 		if c.SampleTimes.Has(c.Time) {
 			c.sample()
 		}
@@ -39,6 +41,19 @@ func (c *CPU) advance(n int) {
 
 func (c *CPU) sample() {
 	c.SampleValues = append(c.SampleValues, c.X*c.Time)
+}
+
+func (c *CPU) pixel() {
+	currentX := len(c.Pixels)
+	current := '.'
+	if c.X-1 <= currentX && currentX <= c.X+1 {
+		current = '#'
+	}
+	c.Pixels = append(c.Pixels, current)
+	if len(c.Pixels) == 40 {
+		fmt.Println(string(c.Pixels))
+		c.Pixels = nil
+	}
 }
 
 func (c *CPU) sum() int {
