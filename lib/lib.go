@@ -31,8 +31,12 @@ func ParseInt(s string) int {
 
 type Set[T comparable] map[T]struct{}
 
-func NewSet[T comparable]() Set[T] {
-	return make(Set[T])
+func NewSet[T comparable](vals ...T) Set[T] {
+	result := make(Set[T])
+	for _, v := range vals {
+		result.Add(v)
+	}
+	return result
 }
 
 func (s Set[T]) Add(v T) {
