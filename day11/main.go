@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -16,15 +17,38 @@ func main() {
 		m := readMonkey(lines[i : i+6])
 		monkeys = append(monkeys, m)
 	}
-	for i := 0; i < 20; i++ {
+	reduce := pickReduce(monkeys)
+	for i := 0; i < pickRounds(); i++ {
 		for _, m := range monkeys {
-			m.run(monkeys)
+			m.run(monkeys, reduce)
 		}
+	}
+	for i, m := range monkeys {
+		fmt.Println(i, m.inspected)
 	}
 	sort.Slice(monkeys, func(i, j int) bool {
 		return monkeys[i].inspected > monkeys[j].inspected
 	})
 	fmt.Println(monkeys[0].inspected * monkeys[1].inspected)
+}
+
+func pickReduce(monkeys []*Monkey) func(int) int {
+	if len(os.Args) == 1 || os.Args[1] == "part1" {
+		return func(v int) int { return v / 3 }
+	}
+	product := 1
+	for _, m := range monkeys {
+		product *= m.next.divisor
+	}
+	fmt.Println(product)
+	return func(v int) int { return v % product }
+}
+
+func pickRounds() int {
+	if len(os.Args) == 1 || os.Args[1] == "part1" {
+		return 20
+	}
+	return 10000
 }
 
 type Monkey struct {
@@ -35,10 +59,10 @@ type Monkey struct {
 	inspected int
 }
 
-func (m *Monkey) run(monkeys []*Monkey) {
+func (m *Monkey) run(monkeys []*Monkey, reduce func(int) int) {
 	for _, val := range m.items {
 		newVal := m.operation.apply(val)
-		newVal /= 3
+		newVal = reduce(newVal)
 		next := m.next.apply(newVal)
 		monkeys[next].items = append(monkeys[next].items, newVal)
 		m.inspected++
