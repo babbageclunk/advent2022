@@ -2,16 +2,15 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/babbageclunk/advent2022/lib"
 )
 
 func main() {
-	m := readMap(lib.ReadLines("sample-input"))
-	path := m.solveFrom(Path{m.start})
-	fmt.Println(len(path) - 1)
-	fmt.Println(path)
+	m := readMap(lib.ReadLines("input"))
+	fmt.Println(m.findShortest())
 }
 
 func readMap(lines []string) heightMap {
@@ -37,61 +36,104 @@ type heightMap struct {
 	start, end lib.Point
 }
 
-func (m heightMap) width() int {
-	return len(m.heights[0])
-}
-
-func (m heightMap) height() int {
-	return len(m.heights)
-}
-
 func (m heightMap) at(p lib.Point) rune {
 	return m.heights[p.Y][p.X]
 }
 
-func (m heightMap) contains(p lib.Point) bool {
-	return p.X >= 0 && p.X < m.width() && p.Y >= 0 && p.Y < m.height()
-}
+type NodeMap [][]*Node
 
-func (m heightMap) neighbours(p lib.Point) []lib.Point {
-	var result []lib.Point
+func (m NodeMap) neighbours(n *Node) []*Node {
+	var result []*Node
 	for _, dir := range lib.Directions {
-		candidate := p.Add(dir)
+		candidate := n.loc.Add(dir)
 		if m.contains(candidate) {
-			result = append(result, candidate)
+			result = append(result, m.at(candidate))
 		}
 	}
 	return result
 }
 
-func (m heightMap) solveFrom(path Path) Path {
-	last := path[len(path)-1]
-	height := m.at(last)
-	if last == m.end {
-		return path
-	}
-	var bestPath Path
-	for _, n := range m.neighbours(last) {
-		newHeight := m.at(n)
-		if !validStep(height, newHeight) {
-			continue
+func (m NodeMap) width() int {
+	return len(m[0])
+}
+
+func (m NodeMap) height() int {
+	return len(m)
+}
+
+func (m NodeMap) at(p lib.Point) *Node {
+	return m[p.Y][p.X]
+}
+
+func (m NodeMap) contains(p lib.Point) bool {
+	return p.X >= 0 && p.X < m.width() && p.Y >= 0 && p.Y < m.height()
+}
+
+type Node struct {
+	loc  lib.Point
+	dist int
+}
+
+func (m heightMap) findShortest() int {
+	// Bastardised version of Dijkstra's algorithm.
+	// Make nodemap
+	unvisited := lib.NewSet[lib.Point]()
+	nodes := make(NodeMap, len(m.heights))
+	for y, row := range m.heights {
+		nodes[y] = make([]*Node, len(row))
+		for x := range row {
+			node := Node{
+				loc:  lib.Point{X: x, Y: y},
+				dist: math.MaxInt,
+			}
+			nodes[y][x] = &node
+			unvisited.Add(node.loc)
 		}
-		if newPath := path.add(n); newPath != nil {
-			newRes := m.solveFrom(newPath)
-			if newRes == nil {
+	}
+	start := nodes.at(m.start)
+	start.dist = 0
+	current := start
+
+	dest := nodes.at(m.end)
+
+	for {
+		neighbours := nodes.neighbours(current)
+		for _, n := range neighbours {
+			if !unvisited.Has(n.loc) {
 				continue
 			}
-			if bestPath == nil || len(newRes) < len(bestPath) {
-				bestPath = newRes
+			// This is only a neighbour if it's a valid step in the height map.
+			if !validStep(m.at(current.loc), m.at(n.loc)) {
+				continue
+			}
+			dist := current.dist + 1
+			if dist < n.dist {
+				n.dist = dist
 			}
 		}
+		unvisited.Remove(current.loc)
+
+		if !unvisited.Has(dest.loc) {
+			break
+		}
+		var smallestUnvisited *Node
+		for loc := range unvisited {
+			node := nodes.at(loc)
+			if smallestUnvisited == nil || node.dist < smallestUnvisited.dist {
+				smallestUnvisited = node
+			}
+		}
+		if smallestUnvisited == dest {
+			break
+		}
+		current = smallestUnvisited
 	}
-	return bestPath
+
+	return dest.dist
 }
 
 func validStep(from, to rune) bool {
-	diff := to - from
-	return diff == 0 || diff == 1
+	return from+1 >= to
 }
 
 type Path []lib.Point
