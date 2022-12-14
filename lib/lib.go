@@ -117,12 +117,21 @@ func (r *RingBuffer[T]) Push(v T) T {
 	return result
 }
 
+func Pt(x, y int) Point {
+	return Point{X: x, Y: y}
+}
+
 type Point struct {
 	X, Y int
 }
 
 func (p Point) Add(o Point) Point {
 	return Point{p.X + o.X, p.Y + o.Y}
+}
+
+func ParsePoint(s string) Point {
+	parts := strings.Split(s, ",")
+	return Point{ParseInt(parts[0]), ParseInt(parts[1])}
 }
 
 var Directions = []Point{
