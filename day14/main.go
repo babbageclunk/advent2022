@@ -10,6 +10,24 @@ import (
 
 func main() {
 	lines := lib.ReadLines("input")
+	world := NewWorld(lines)
+	grains := 0
+	for world.drop() {
+		grains++
+	}
+	fmt.Println(grains)
+	world2 := NewWorld(lines)
+	grains = 0
+	// world2.dump()
+	floor := world2.maxy + 2
+	for world2.dropFloor(floor) {
+		grains++
+		// world2.dump()
+	}
+	fmt.Println(grains)
+}
+
+func NewWorld(lines []string) *World {
 	world := World{
 		spots: make(map[lib.Point]rune),
 		minx:  math.MaxInt,
@@ -20,11 +38,7 @@ func main() {
 	for _, line := range lines {
 		world.draw(line)
 	}
-	grains := 0
-	for world.drop() {
-		grains++
-	}
-	fmt.Println(grains)
+	return &world
 }
 
 type World struct {
@@ -81,7 +95,7 @@ func (w *World) draw(line string) {
 }
 
 func (w *World) dump() {
-	fmt.Println(w)
+	// fmt.Println(w)
 	for y := w.miny; y <= w.maxy; y++ {
 		line := make([]rune, w.maxx-w.minx)
 		for i, x := 0, w.minx; x < w.maxx; i, x = i+1, x+1 {
@@ -123,4 +137,26 @@ func (w *World) drop() bool {
 	}
 	// Fell off into the void!
 	return false
+}
+
+func (w *World) dropFloor(floor int) bool {
+	if w.at(source) {
+		return false
+	}
+	cur := source
+	for {
+		moved := false
+		for _, dir := range dirs {
+			newPos := cur.Add(dir)
+			if !w.at(newPos) && newPos.Y != floor {
+				cur = newPos
+				moved = true
+				break
+			}
+		}
+		if !moved {
+			w.set(cur, 'o')
+			return true
+		}
+	}
 }
