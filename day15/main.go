@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"os"
 	"strings"
 
 	"github.com/samber/lo"
@@ -11,6 +12,14 @@ import (
 )
 
 func main() {
+	if len(os.Args) == 1 || os.Args[1] == "part1" {
+		part1()
+	} else {
+		part2()
+	}
+}
+
+func part1() {
 	// w := NewWorld(lib.ReadLines("sample-input"))
 	w := NewWorld(lib.ReadLines("input"))
 	count := 0
@@ -26,6 +35,52 @@ func main() {
 	}
 	fmt.Println(count)
 	// fmt.Println(string(line))
+}
+
+const scale = 4_000_000
+
+func part2() {
+	w := NewWorld(lib.ReadLines("input"))
+	bset := lib.NewSet[lib.Point]()
+	for pt, dist := range w.sensors {
+		for _, b := range boundaries(pt, dist) {
+			if b.X < 0 || b.X > scale {
+				continue
+			}
+			if b.Y < 0 || b.Y > scale {
+				continue
+			}
+			bset.Add(b)
+		}
+	}
+	fmt.Println(len(bset))
+pts:
+	for pt := range bset {
+		// fmt.Println(pt)
+		// Check whether this point is further than dist from each sensor.
+		for beacon, dist := range w.sensors {
+			if beacon.Sub(pt).Manhattan() <= dist {
+				continue pts
+			}
+		}
+		// This must be far enough from all beacons.
+		fmt.Println(pt, (4_000_000*pt.X)+pt.Y)
+		break
+	}
+}
+
+func boundaries(pt lib.Point, dist int) []lib.Point {
+	var res []lib.Point
+	// Add top and bottom
+	d := lib.Pt(0, dist+1)
+	res = append(res, pt.Sub(d), pt.Add(d))
+	for delta := -dist; delta <= dist; delta++ {
+		left := dist - lib.Abs(delta) + 1
+		d1 := lib.Pt(pt.X-left, pt.Y+delta)
+		d2 := lib.Pt(pt.X+left, pt.Y+delta)
+		res = append(res, d1, d2)
+	}
+	return res
 }
 
 func NewWorld(lines []string) *World {
