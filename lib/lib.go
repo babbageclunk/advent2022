@@ -129,6 +129,14 @@ func (p Point) Add(o Point) Point {
 	return Point{p.X + o.X, p.Y + o.Y}
 }
 
+func (p Point) Sub(o Point) Point {
+	return Pt(p.X-o.X, p.Y-o.Y)
+}
+
+func (p Point) Manhattan() int {
+	return Abs(p.X) + Abs(p.Y)
+}
+
 func ParsePoint(s string) Point {
 	parts := strings.Split(s, ",")
 	return Point{ParseInt(parts[0]), ParseInt(parts[1])}
@@ -139,4 +147,22 @@ var Directions = []Point{
 	{0, -1},
 	{1, 0},
 	{0, 1},
+}
+
+func Abs(val int) int {
+	if val < 0 {
+		return -val
+	}
+	return val
+}
+
+func Sign(val int) int {
+	switch {
+	case val < 0:
+		return -1
+	case val > 0:
+		return 1
+	default:
+		return 0
+	}
 }
