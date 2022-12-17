@@ -166,3 +166,10 @@ func Sign(val int) int {
 		return 0
 	}
 }
+
+func Min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
