@@ -6,13 +6,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/babbageclunk/advent2022/lib"
 	"github.com/samber/lo"
+
+	"github.com/babbageclunk/advent2022/lib"
 )
 
 func main() {
 	g := make(Graph)
-	for _, line := range lib.ReadLines("sample-input") {
+	for _, line := range lib.ReadLines("input") {
 		node := readNode(line)
 		g[node.name] = node
 	}
@@ -20,7 +21,17 @@ func main() {
 	// dist := g.shortestDist("AA")
 	// fmt.Println(dist)
 	// fmt.Println(g.route("AA", "JJ", dist))
-	fmt.Println(findMaxFlow(g))
+	// fmt.Println(findMaxFlow(g))
+	nonZero := lo.FilterMap(lo.Values(g), func(n *Node, _ int) (string, bool) {
+		return n.name, n.rate != 0
+	})
+	fmt.Println(len(nonZero))
+	count := 0
+	for p := lib.NewPermuter(nonZero); p.More(); p.Next() {
+		fmt.Println(p.Current())
+		count++
+	}
+	fmt.Println(count)
 }
 
 func findMaxFlow(g Graph) int {
@@ -142,6 +153,39 @@ func (g Graph) shortestDist(start string) map[string]int {
 			return dist[a] < dist[b]
 		})
 	}
+}
+
+type np struct {
+	a, b string
+}
+
+func (g Graph) allDistances() map[np]int {
+	// Using Floyd-Warshall's algorithm, find the shortest distance
+	// between all pairs of nodes.
+	dist := make(map[np]int)
+	lookup := func(a, b string) int {
+		d, found := dist[np{a, b}]
+		if !found {
+			return math.MaxInt
+		}
+		return d
+	}
+	for _, node := range g {
+		dist[np{node.name, node.name}] = 0
+		for _, neighbour := range node.neighbours {
+			dist[np{node.name, neighbour}] = 1
+		}
+	}
+	for k := range g {
+		for i := range g {
+			for j := range g {
+				if lookup(i, j) > lookup(i, k)+lookup(k, j) {
+					dist[np{i, j}] = lookup(i, k) + lookup(k, j)
+				}
+			}
+		}
+	}
+	return dist
 }
 
 func (g Graph) route(start, end string, dist map[string]int) []string {

@@ -173,3 +173,43 @@ func Min(a, b int) int {
 	}
 	return b
 }
+
+type Permuter[T any] struct {
+	items []T
+	perm  []int
+}
+
+func NewPermuter[T any](items []T) *Permuter[T] {
+	return &Permuter[T]{items: items, perm: make([]int, len(items))}
+}
+
+func (p *Permuter[T]) More() bool {
+	return p.perm[0] < len(p.perm)
+}
+
+func (p *Permuter[T]) Next() {
+	for i := len(p.perm) - 1; i >= 0; i-- {
+		if i == 0 || p.perm[i] < len(p.perm)-i-1 {
+			p.perm[i]++
+			return
+		}
+		p.perm[i] = 0
+	}
+}
+
+func (p *Permuter[T]) Current() []T {
+	result := make([]T, len(p.items))
+	copy(result, p.items)
+	for i, v := range p.perm {
+		result[i], result[i+v] = result[i+v], result[i]
+	}
+	return result
+}
+
+func AllPermutations[T any](items []T) [][]T {
+	var result [][]T
+	for p := NewPermuter(items); p.More(); p.Next() {
+		result = append(result, p.Current())
+	}
+	return result
+}
