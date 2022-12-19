@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"strconv"
 	"strings"
+
+	"golang.org/x/exp/constraints"
 )
 
 func Read(filename string) string {
@@ -167,8 +169,15 @@ func Sign(val int) int {
 	}
 }
 
-func Min(a, b int) int {
+func Min[T constraints.Ordered](a, b T) T {
 	if a < b {
+		return a
+	}
+	return b
+}
+
+func Max[T constraints.Ordered](a, b T) T {
+	if a > b {
 		return a
 	}
 	return b
@@ -211,5 +220,84 @@ func AllPermutations[T any](items []T) [][]T {
 	for p := NewPermuter(items); p.More(); p.Next() {
 		result = append(result, p.Current())
 	}
+	return result
+}
+
+type Queue[T any] struct {
+	len        int
+	head, tail *node[T]
+}
+
+type node[T any] struct {
+	value T
+	next  *node[T]
+	prev  *node[T]
+}
+
+func NewQueue[T any](items ...T) *Queue[T] {
+	q := &Queue[T]{len: 0, head: nil, tail: nil}
+	for _, item := range items {
+		q.Push(item)
+	}
+	return q
+}
+
+func (q *Queue[T]) Len() int {
+	return q.len
+}
+
+func (q *Queue[T]) Push(v T) {
+	n := &node[T]{value: v}
+	if q.head == nil {
+		q.head = n
+		q.tail = n
+	} else {
+		q.tail.next = n
+		n.prev = q.tail
+		q.tail = n
+	}
+	q.len++
+}
+
+func (q *Queue[T]) Pop() T {
+	if q.head == nil {
+		panic("empty queue")
+	}
+	result := q.head.value
+	q.head = q.head.next
+	if q.head == nil {
+		q.tail = nil
+	} else {
+		q.head.prev = nil
+	}
+	q.len--
+	return result
+}
+
+func (q *Queue[T]) Peek() T {
+	if q.head == nil {
+		panic("empty queue")
+	}
+	return q.head.value
+}
+
+func (q *Queue[T]) Clear() {
+	q.head = nil
+	q.tail = nil
+	q.len = 0
+}
+
+func (q *Queue[T]) ToSlice() []T {
+	result := make([]T, q.len)
+	for i, n := 0, q.head; n != nil; i, n = i+1, n.next {
+		result[i] = n.value
+	}
+	return result
+}
+
+func CopyAppend[T any](items []T, item T) []T {
+	result := make([]T, len(items)+1)
+	copy(result, items)
+	result[len(items)] = item
 	return result
 }

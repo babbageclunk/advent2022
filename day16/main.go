@@ -18,80 +18,63 @@ func main() {
 		g[node.name] = node
 	}
 	g.dumpDot()
-	// dist := g.shortestDist("AA")
-	// fmt.Println(dist)
-	// fmt.Println(g.route("AA", "JJ", dist))
-	// fmt.Println(findMaxFlow(g))
-	nonZero := lo.FilterMap(lo.Values(g), func(n *Node, _ int) (string, bool) {
-		return n.name, n.rate != 0
-	})
-	fmt.Println(len(nonZero))
-	count := 0
-	for p := lib.NewPermuter(nonZero); p.More(); p.Next() {
-		fmt.Println(p.Current())
-		count++
-	}
-	fmt.Println(count)
+	fmt.Println(findMaxFlow(g))
 }
 
 func findMaxFlow(g Graph) int {
-	s := Solver{
-		pos:    "AA",
-		graph:  g,
-		valves: make(map[string]int),
-		path:   nil,
-		time:   0,
+	dist := g.allDistances()
+	nextSteps := lib.NewQueue(Step{
+		node:      "AA",
+		remaining: totalTime,
+		total:     0,
+		valves:    nil,
+	})
+	nonZero := lo.FilterMap(lo.Values(g), func(n *Node, _ int) (string, bool) {
+		return n.name, n.rate != 0
+	})
+	rates := lo.MapEntries(g, func(k string, n *Node) (string, int) {
+		return k, n.rate
+	})
+	var bestStep Step
+	steps := 0
+	for nextSteps.Len() > 0 {
+		steps++
+		step := nextSteps.Pop()
+		// Try every node that we haven't visited yet that we can get
+		// to in the remaining time.
+		unvisited, _ := lo.Difference(nonZero, step.valves)
+		for _, node := range unvisited {
+			timeToTurnOn := dist[np{step.node, node}] + 1
+			if timeToTurnOn > step.remaining {
+				continue
+			}
+			newRemaining := step.remaining - timeToTurnOn
+			newStep := Step{
+				node:      node,
+				remaining: newRemaining,
+				total:     step.total + (rates[node] * newRemaining),
+				valves:    lib.CopyAppend(step.valves, node),
+			}
+			nextSteps.Push(newStep)
+			if bestStep.total < newStep.total {
+				bestStep = newStep
+			}
+		}
 	}
-	total := 0
-	for t := 1; t <= totalTime; t++ {
-		s.step()
-		s.time = t
-		total += s.flow()
-	}
-	return total
+	fmt.Println(steps)
+	fmt.Printf("%+v\n", bestStep)
+	maxFlow := bestStep.total
+	return maxFlow
+}
+
+type Step struct {
+	node      string
+	remaining int
+	total     int
+	valves    []string
 }
 
 const totalTime = 30
-
-type Solver struct {
-	pos    string
-	graph  Graph
-	valves map[string]int
-	path   []string
-	time   int
-}
-
-func (s *Solver) step() {
-	// If we're walking, take the next move
-	if len(s.path) > 0 {
-		fmt.Printf("Walking from %s to %s (towards %s)\n", s.pos, s.path[0], s.path[len(s.path)-1])
-		s.pos = s.path[0]
-		s.path = s.path[1:]
-		return
-	}
-	// Work out the best valve not-currently-on to turn on.
-	dist := s.graph.shortestDist(s.pos)
-	notOn := lo.Filter(lo.Values(s.graph), func(n *Node, _ int) bool {
-		return s.valves[n.name] == 0
-	})
-	best := lo.MaxBy(notOn, func(a, b *Node) bool {
-		remaining := totalTime - s.time
-		aval := a.rate * (remaining - dist[a.name])
-		bval := b.rate * (remaining - dist[b.name])
-		return aval > bval
-	})
-	if best.name == s.pos {
-		fmt.Printf("Turning on %s\n", best.name)
-		s.valves[best.name] = best.rate
-		return
-	}
-	s.path = s.graph.route(s.pos, best.name, dist)
-	fmt.Printf("Next valve is %s, path %s\n", best.name, s.path)
-}
-
-func (s *Solver) flow() int {
-	return lo.Sum(lo.Values(s.valves))
-}
 
 type Node struct {
 	name       string
@@ -176,11 +159,20 @@ func (g Graph) allDistances() map[np]int {
 			dist[np{node.name, neighbour}] = 1
 		}
 	}
+	addWithInf := func(a, b int) int {
+		if a == math.MaxInt || b == math.MaxInt {
+			return math.MaxInt
+		}
+		return a + b
+	}
 	for k := range g {
 		for i := range g {
 			for j := range g {
-				if lookup(i, j) > lookup(i, k)+lookup(k, j) {
-					dist[np{i, j}] = lookup(i, k) + lookup(k, j)
+				iToK := lookup(i, k)
+				kToJ := lookup(k, j)
+				iToJ := addWithInf(iToK, kToJ)
+				if lookup(i, j) > iToJ {
+					dist[np{i, j}] = iToJ
 				}
 			}
 		}
