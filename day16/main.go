@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/samber/lo"
@@ -18,14 +19,20 @@ func main() {
 		g[node.name] = node
 	}
 	g.dumpDot()
-	fmt.Println(findMaxFlow(g))
+	if len(os.Args) < 2 || os.Args[1] == "part1" {
+		fmt.Println(findMaxFlow(g, 30, &singleBest{}))
+	} else {
+		fmt.Println(findMaxFlow(g, 26, &bestTwo{
+			best: make(map[string]Step),
+		}))
+	}
 }
 
-func findMaxFlow(g Graph) int {
+func findMaxFlow(g Graph, maxTime int, chooser StepChooser) int {
 	dist := g.allDistances()
 	nextSteps := lib.NewQueue(Step{
 		node:      "AA",
-		remaining: totalTime,
+		remaining: maxTime,
 		total:     0,
 		valves:    nil,
 	})
@@ -35,7 +42,6 @@ func findMaxFlow(g Graph) int {
 	rates := lo.MapEntries(g, func(k string, n *Node) (string, int) {
 		return k, n.rate
 	})
-	var bestStep Step
 	steps := 0
 	for nextSteps.Len() > 0 {
 		steps++
@@ -56,15 +62,81 @@ func findMaxFlow(g Graph) int {
 				valves:    lib.CopyAppend(step.valves, node),
 			}
 			nextSteps.Push(newStep)
-			if bestStep.total < newStep.total {
-				bestStep = newStep
-			}
+			chooser.Consider(newStep)
 		}
 	}
 	fmt.Println(steps)
-	fmt.Printf("%+v\n", bestStep)
-	maxFlow := bestStep.total
-	return maxFlow
+	bestSteps := chooser.Best()
+	for _, step := range bestSteps {
+		fmt.Printf("%+v\n", step)
+	}
+	return lo.SumBy(bestSteps, func(s Step) int {
+		return s.total
+	})
+}
+
+type StepChooser interface {
+	Consider(Step)
+	Best() []Step
+}
+
+type singleBest struct {
+	best Step
+}
+
+func (s *singleBest) Consider(step Step) {
+	if step.total > s.best.total {
+		s.best = step
+	}
+}
+
+func (s *singleBest) Best() []Step {
+	return []Step{s.best}
+}
+
+type bestTwo struct {
+	best map[string]Step
+}
+
+func (b *bestTwo) Consider(step Step) {
+	key := toKey(step.valves)
+	if existing := b.best[key]; step.total > existing.total {
+		b.best[key] = step
+	}
+}
+
+func (b *bestTwo) Best() []Step {
+	total := 0
+	bestPair := make([]Step, 2)
+	fmt.Println(len(b.best), "possible best steps")
+	expandedKeys := lo.MapEntries(b.best, func(k string, _ Step) (string, []string) {
+		return k, fromKey(k)
+	})
+	for lkey, left := range b.best {
+		leftKey := expandedKeys[lkey]
+		for rkey, right := range b.best {
+			rightKey := expandedKeys[rkey]
+			if len(lo.Intersect(leftKey, rightKey)) > 0 {
+				continue
+			}
+			if left.total+right.total > total {
+				total = left.total + right.total
+				bestPair[0] = left
+				bestPair[1] = right
+			}
+		}
+	}
+	return bestPair
+}
+
+func toKey(v []string) string {
+	vCopy := append([]string(nil), v...)
+	sort.Strings(vCopy)
+	return strings.Join(vCopy, ",")
+}
+
+func fromKey(key string) []string {
+	return strings.Split(key, ",")
 }
 
 type Step struct {
@@ -73,8 +145,6 @@ type Step struct {
 	total     int
 	valves    []string
 }
-
-const totalTime = 30
 
 type Node struct {
 	name       string
