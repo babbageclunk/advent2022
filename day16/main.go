@@ -23,14 +23,14 @@ func main() {
 		fmt.Println(findMaxFlow(g, 30, &singleBest{}))
 	} else {
 		fmt.Println(findMaxFlow(g, 26, &bestTwo{
-			best: make(map[string]Step),
+			best: make(map[string]*Step),
 		}))
 	}
 }
 
 func findMaxFlow(g Graph, maxTime int, chooser StepChooser) int {
 	dist := g.allDistances()
-	nextSteps := lib.NewQueue(Step{
+	nextSteps := lib.NewQueue(&Step{
 		node:      "AA",
 		remaining: maxTime,
 		total:     0,
@@ -61,8 +61,8 @@ func findMaxFlow(g Graph, maxTime int, chooser StepChooser) int {
 				total:     step.total + (rates[node] * newRemaining),
 				valves:    lib.CopyAppend(step.valves, node),
 			}
-			nextSteps.Push(newStep)
-			chooser.Consider(newStep)
+			nextSteps.Push(&newStep)
+			chooser.Consider(&newStep)
 		}
 	}
 	fmt.Println(steps)
@@ -70,46 +70,46 @@ func findMaxFlow(g Graph, maxTime int, chooser StepChooser) int {
 	for _, step := range bestSteps {
 		fmt.Printf("%+v\n", step)
 	}
-	return lo.SumBy(bestSteps, func(s Step) int {
+	return lo.SumBy(bestSteps, func(s *Step) int {
 		return s.total
 	})
 }
 
 type StepChooser interface {
-	Consider(Step)
-	Best() []Step
+	Consider(*Step)
+	Best() []*Step
 }
 
 type singleBest struct {
-	best Step
+	best *Step
 }
 
-func (s *singleBest) Consider(step Step) {
-	if step.total > s.best.total {
+func (s *singleBest) Consider(step *Step) {
+	if s.best == nil || step.total > s.best.total {
 		s.best = step
 	}
 }
 
-func (s *singleBest) Best() []Step {
-	return []Step{s.best}
+func (s *singleBest) Best() []*Step {
+	return []*Step{s.best}
 }
 
 type bestTwo struct {
-	best map[string]Step
+	best map[string]*Step
 }
 
-func (b *bestTwo) Consider(step Step) {
+func (b *bestTwo) Consider(step *Step) {
 	key := toKey(step.valves)
-	if existing := b.best[key]; step.total > existing.total {
+	if existing, found := b.best[key]; !found || step.total > existing.total {
 		b.best[key] = step
 	}
 }
 
-func (b *bestTwo) Best() []Step {
+func (b *bestTwo) Best() []*Step {
 	total := 0
-	bestPair := make([]Step, 2)
+	bestPair := make([]*Step, 2)
 	fmt.Println(len(b.best), "possible best steps")
-	expandedKeys := lo.MapEntries(b.best, func(k string, _ Step) (string, []string) {
+	expandedKeys := lo.MapEntries(b.best, func(k string, _ *Step) (string, []string) {
 		return k, fromKey(k)
 	})
 	for lkey, left := range b.best {
