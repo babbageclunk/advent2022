@@ -2,20 +2,53 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/samber/lo"
+
+	"github.com/babbageclunk/advent2022/lib"
 )
 
 func main() {
+	jets := []rune(strings.TrimSpace(lib.Read("sample-input")))
+	nudges := lo.Map(jets, func(j rune, _ int) lib.Point {
+		if j == '<' {
+			return left
+		}
+		return right
+	})
+	nudger := Nudger{nudges: nudges, pos: 0}
 	var t Tower
-	t.grow(10)
-	sprites[2].draw(&t, 0, 0)
-	sprites[1].draw(&t, 0, 2)
+	for i := 0; i < 3; i++ {
+		sprite := sprites[i%len(sprites)]
+		pos := lib.Pt(2, t.highestBlock()+3)
+		t.grow((pos.Y + sprite.height()) - t.top())
+		for pos.Y >= 0 {
+			newPos := pos
+			nudged := newPos.Add(nudger.next())
+			inBounds := nudged.X >= 0 && nudged.X+sprite.width() <= towerWidth
+			if inBounds && sprite.canDraw(&t, nudged.X, nudged.Y) {
+				newPos = nudged
+			}
+			dropped := newPos.Add(down)
+			if dropped.Y < 0 || !sprite.canDraw(&t, dropped.X, dropped.Y) {
+				// Keep any successful nudge
+				pos = newPos
+				break
+			}
+			pos = dropped
+		}
+		sprite.draw(&t, pos.X, pos.Y)
+	}
+	fmt.Println(t.highestBlock())
 	t.dump()
-
-	fmt.Println(sprites[0].canDraw(&t, 0, 0))
-	fmt.Println(sprites[0].canDraw(&t, 3, 0))
 }
+
+var (
+	left  = lib.Directions[0]
+	down  = lib.Directions[1]
+	right = lib.Directions[2]
+)
 
 const (
 	towerWidth   = 7
@@ -23,6 +56,17 @@ const (
 	leftOffset   = 2
 	bottomOffset = 3
 )
+
+type Nudger struct {
+	nudges []lib.Point
+	pos    int
+}
+
+func (n *Nudger) next() lib.Point {
+	res := n.nudges[n.pos]
+	n.pos = (n.pos + 1) % len(n.nudges)
+	return res
+}
 
 type Tower struct {
 	lines [][]rune
@@ -39,6 +83,21 @@ func (t *Tower) grow(n int) {
 	for i := 0; i < n; i++ {
 		t.lines = append(t.lines, []rune("       "))
 	}
+}
+
+func (t *Tower) top() int {
+	return len(t.lines)
+}
+
+func (t *Tower) highestBlock() int {
+	for i := len(t.lines) - 1; i >= 0; i-- {
+		for _, c := range t.lines[i] {
+			if c != ' ' {
+				return i
+			}
+		}
+	}
+	return 0
 }
 
 var sprites = makeSprites([][]string{{
