@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"math"
+	"os"
 	"strings"
 
 	"github.com/samber/lo"
@@ -19,6 +21,14 @@ func main() {
 	})
 	nudger := Nudger{nudges: nudges, pos: 0}
 	var t Tower
+	if len(os.Args) < 2 || os.Args[1] == "part1" {
+		part1(&t, &nudger)
+	} else {
+		part2(&t, &nudger)
+	}
+}
+
+func part1(t *Tower, nudger *Nudger) {
 	for i := 0; i < 2022; i++ {
 		sprite := sprites[i%len(sprites)]
 		pos := lib.Pt(2, t.highestBlock()+3)
@@ -29,12 +39,12 @@ func main() {
 			dir := nudger.next()
 			nudged := newPos.Add(dir)
 			inBounds := nudged.X >= 0 && nudged.X+sprite.width() <= towerWidth
-			if inBounds && sprite.canDraw(&t, nudged.X, nudged.Y) {
+			if inBounds && sprite.canDraw(t, nudged.X, nudged.Y) {
 				// fmt.Println("nudged by", dir)
 				newPos = nudged
 			}
 			dropped := newPos.Add(down)
-			if dropped.Y < 0 || !sprite.canDraw(&t, dropped.X, dropped.Y) {
+			if dropped.Y < 0 || !sprite.canDraw(t, dropped.X, dropped.Y) {
 				// Keep any successful nudge
 				pos = newPos
 				break
@@ -42,10 +52,68 @@ func main() {
 			// fmt.Println("dropping")
 			pos = dropped
 		}
-		sprite.draw(&t, pos.X, pos.Y)
+		sprite.draw(t, pos.X, pos.Y)
 	}
 	fmt.Println(t.highestBlock())
 	// t.dump()
+}
+
+func part2(t *Tower, n *Nudger) {
+	states := make(map[State]TowerValue)
+	for i := 0; i < 100_000; i++ {
+		sprite := sprites[i%len(sprites)]
+		pos := lib.Pt(2, t.highestBlock()+3)
+		// fmt.Println("dropping", sprite, "at", pos)
+		t.grow((pos.Y + sprite.height()) - t.top())
+		for pos.Y >= 0 {
+			newPos := pos
+			dir := n.next()
+			nudged := newPos.Add(dir)
+			inBounds := nudged.X >= 0 && nudged.X+sprite.width() <= towerWidth
+			if inBounds && sprite.canDraw(t, nudged.X, nudged.Y) {
+				// fmt.Println("nudged by", dir)
+				newPos = nudged
+			}
+			dropped := newPos.Add(down)
+			if dropped.Y < 0 || !sprite.canDraw(t, dropped.X, dropped.Y) {
+				// Keep any successful nudge
+				pos = newPos
+				break
+			}
+			// fmt.Println("dropping")
+			pos = dropped
+		}
+		sprite.draw(t, pos.X, pos.Y)
+		state := State{
+			nudger: n.pos,
+			sprite: i % len(sprites),
+			tower:  t.state(),
+		}
+		val, found := states[state]
+		if found {
+			fmt.Printf("repeat found! blocks: %d, highest: %d, val: %+v\n", i, t.highestBlock(), val)
+			fmt.Printf("%+v\n", state)
+			break
+		} else {
+			states[state] = TowerValue{highestBlock: t.highestBlock(), blocks: i}
+		}
+	}
+}
+
+type State struct {
+	nudger int
+	sprite int
+	tower  TowerState
+}
+
+// Tuple of depths from the top of the tower for each column.
+type TowerState struct {
+	a, b, c, d, e, f, g int
+}
+
+type TowerValue struct {
+	highestBlock int
+	blocks       int
 }
 
 var (
@@ -102,6 +170,27 @@ func (t *Tower) highestBlock() int {
 		}
 	}
 	return 0
+}
+
+func (t *Tower) state() TowerState {
+	return TowerState{
+		t.depth(0),
+		t.depth(1),
+		t.depth(2),
+		t.depth(3),
+		t.depth(4),
+		t.depth(5),
+		t.depth(6),
+	}
+}
+
+func (t *Tower) depth(col int) int {
+	for i := len(t.lines) - 1; i >= 0; i-- {
+		if t.lines[i][col] != ' ' {
+			return (t.top() - i) - 1
+		}
+	}
+	return math.MinInt
 }
 
 var sprites = makeSprites([][]string{{
