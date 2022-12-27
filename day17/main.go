@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	jets := []rune(strings.TrimSpace(lib.Read("sample-input")))
+	jets := []rune(strings.TrimSpace(lib.Read("input")))
 	nudges := lo.Map(jets, func(j rune, _ int) lib.Point {
 		if j == '<' {
 			return left
@@ -19,15 +19,18 @@ func main() {
 	})
 	nudger := Nudger{nudges: nudges, pos: 0}
 	var t Tower
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 2022; i++ {
 		sprite := sprites[i%len(sprites)]
 		pos := lib.Pt(2, t.highestBlock()+3)
+		// fmt.Println("dropping", sprite, "at", pos)
 		t.grow((pos.Y + sprite.height()) - t.top())
 		for pos.Y >= 0 {
 			newPos := pos
-			nudged := newPos.Add(nudger.next())
+			dir := nudger.next()
+			nudged := newPos.Add(dir)
 			inBounds := nudged.X >= 0 && nudged.X+sprite.width() <= towerWidth
 			if inBounds && sprite.canDraw(&t, nudged.X, nudged.Y) {
+				// fmt.Println("nudged by", dir)
 				newPos = nudged
 			}
 			dropped := newPos.Add(down)
@@ -36,12 +39,13 @@ func main() {
 				pos = newPos
 				break
 			}
+			// fmt.Println("dropping")
 			pos = dropped
 		}
 		sprite.draw(&t, pos.X, pos.Y)
 	}
 	fmt.Println(t.highestBlock())
-	t.dump()
+	// t.dump()
 }
 
 var (
@@ -93,7 +97,7 @@ func (t *Tower) highestBlock() int {
 	for i := len(t.lines) - 1; i >= 0; i-- {
 		for _, c := range t.lines[i] {
 			if c != ' ' {
-				return i
+				return i + 1
 			}
 		}
 	}
