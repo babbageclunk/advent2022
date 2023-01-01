@@ -60,6 +60,8 @@ func part1(t *Tower, nudger *Nudger) {
 
 func part2(t *Tower, n *Nudger) {
 	states := make(map[State]TowerValue)
+	var firstVal, repeatVal TowerValue
+	var repeatState State
 	for i := 0; i < 100_000; i++ {
 		sprite := sprites[i%len(sprites)]
 		pos := lib.Pt(2, t.highestBlock()+3)
@@ -91,13 +93,79 @@ func part2(t *Tower, n *Nudger) {
 		}
 		val, found := states[state]
 		if found {
-			fmt.Printf("repeat found! blocks: %d, highest: %d, val: %+v\n", i, t.highestBlock(), val)
+			repeatVal = TowerValue{highestBlock: t.highestBlock(), blocks: i}
+			firstVal = val
+			repeatState = state
+			fmt.Printf("repeat found! repeat: %+v, val: %+v\n", repeatVal, val)
 			fmt.Printf("%+v\n", state)
 			break
 		} else {
 			states[state] = TowerValue{highestBlock: t.highestBlock(), blocks: i}
 		}
 	}
+
+	var (
+		newVal     TowerValue
+		finalState State
+	)
+	// Run for repeatVal.blocks - firstVal.blocks and check what the
+	// state looks like.
+	diff := repeatVal.blocks - firstVal.blocks
+	height := repeatVal.highestBlock - firstVal.highestBlock
+	fmt.Println("repeat period", diff)
+	fmt.Println("height increase", height)
+	blockHeights := make([]int, diff+1)
+	blocks := 0
+	for i := repeatVal.blocks + 1; i <= repeatVal.blocks+diff; i++ {
+		sprite := sprites[i%len(sprites)]
+		pos := lib.Pt(2, t.highestBlock()+3)
+		// fmt.Println("dropping", sprite, "at", pos)
+		t.grow((pos.Y + sprite.height()) - t.top())
+		for pos.Y >= 0 {
+			newPos := pos
+			dir := n.next()
+			nudged := newPos.Add(dir)
+			inBounds := nudged.X >= 0 && nudged.X+sprite.width() <= towerWidth
+			if inBounds && sprite.canDraw(t, nudged.X, nudged.Y) {
+				// fmt.Println("nudged by", dir)
+				newPos = nudged
+			}
+			dropped := newPos.Add(down)
+			if dropped.Y < 0 || !sprite.canDraw(t, dropped.X, dropped.Y) {
+				// Keep any successful nudge
+				pos = newPos
+				break
+			}
+			// fmt.Println("dropping")
+			pos = dropped
+		}
+		sprite.draw(t, pos.X, pos.Y)
+		blocks++
+		blockHeights[blocks] = t.highestBlock() - repeatVal.highestBlock
+	}
+	newVal = TowerValue{highestBlock: t.highestBlock(), blocks: (repeatVal.blocks + diff)}
+	finalState = State{
+		nudger: n.pos,
+		sprite: (repeatVal.blocks + diff) % len(sprites),
+		tower:  t.state(),
+	}
+	fmt.Printf("after rerunning: val=%+v, state=%+v\n", newVal, finalState)
+	fmt.Println("repeatState == finalState", repeatState == finalState)
+	increase := newVal.highestBlock - repeatVal.highestBlock
+	fmt.Println("increase in height", increase)
+	fmt.Println("matches", increase == height)
+
+	// Now we know that the state of the system repeats after diff
+	// blocks, we can calculate the height of the tower after a
+	// trillion blocks...
+
+	targetBlocks := 1_000_000_000_000
+	left := targetBlocks - firstVal.blocks
+	repeats := left / diff
+	remainder := left % diff
+
+	totalHeight := firstVal.highestBlock + (repeats * increase) + blockHeights[remainder] - 1
+	fmt.Println(totalHeight)
 }
 
 type State struct {
