@@ -54,7 +54,9 @@ func readPoint(line string) Point3 {
 	}
 }
 
-func part1(lines []string) {
+type Graph map[Point3]lib.Set[Point3]
+
+func readGraph(lines []string) Graph {
 	graph := make(map[Point3]lib.Set[Point3], len(lines))
 	for _, line := range lines {
 		pt := readPoint(line)
@@ -69,6 +71,11 @@ func part1(lines []string) {
 		}
 		graph[pt] = neighbours
 	}
+	return graph
+}
+
+func part1(lines []string) {
+	graph := readGraph(lines)
 	// Surface area of the nodes is sum of (6 - edges) for each node.
 	total := lo.SumBy(lo.Values(graph), func(item lib.Set[Point3]) int {
 		return 6 - item.Len()
@@ -76,4 +83,27 @@ func part1(lines []string) {
 	fmt.Println(total)
 }
 
-func part2(lines []string) {}
+type GetterFunc func(Point3) int
+
+var getters = []GetterFunc{
+	func(p Point3) int { return p.x },
+	func(p Point3) int { return p.y },
+	func(p Point3) int { return p.z },
+}
+
+func part2(lines []string) {
+	graph := readGraph(lines)
+	mins := lo.Map(getters, func(getter GetterFunc, _ int) int {
+		return lo.Min(lo.Map(lo.Keys(graph), func(p Point3, _ int) int {
+			return getter(p)
+		}))
+	})
+	maxs := lo.Map(getters, func(getter GetterFunc, _ int) int {
+		return lo.Max(lo.Map(lo.Keys(graph), func(p Point3, _ int) int {
+			return getter(p)
+		}))
+	})
+
+	fmt.Println(mins)
+	fmt.Println(maxs)
+}
