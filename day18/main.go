@@ -167,12 +167,12 @@ func part2(lines []string) {
 					// A neighbour is connected to the outside, so we are
 					// too.
 					connected.Add(item)
-					break
+					continue
 				}
 				if outside(neighbour, mins, maxs) {
 					connected.Add(neighbour)
 					connected.Add(item)
-					break
+					continue
 				}
 				if !done.Has(neighbour) {
 					todo.Add(neighbour)
@@ -184,8 +184,8 @@ func part2(lines []string) {
 	// connected should only contain the gaps that are connected to
 	// the outside.
 	fmt.Println("connected", connected.Len())
-	left, _ := lo.Difference(lo.Keys(gaps), lo.Keys(connected))
-	fmt.Println("left", left)
+	// left, _ := lo.Difference(lo.Keys(gaps), lo.Keys(connected))
+	// fmt.Println("left", left)
 
 	total := 0
 	for _, pt := range lo.Keys(graph) {
