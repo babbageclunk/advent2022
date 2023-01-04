@@ -56,20 +56,24 @@ func readPoint(line string) Point3 {
 
 type Graph map[Point3]lib.Set[Point3]
 
+func (g Graph) add(p Point3) {
+	neighbours := lib.NewSet[Point3]()
+	for _, neighbour := range p.neighbours() {
+		otherNeighbours, found := g[neighbour]
+		if !found {
+			continue
+		}
+		neighbours.Add(neighbour)
+		otherNeighbours.Add(p)
+	}
+	g[p] = neighbours
+}
+
 func readGraph(lines []string) Graph {
 	graph := make(map[Point3]lib.Set[Point3], len(lines))
 	for _, line := range lines {
 		pt := readPoint(line)
-		neighbours := lib.NewSet[Point3]()
-		for _, neighbour := range pt.neighbours() {
-			otherNeighbours, found := graph[neighbour]
-			if !found {
-				continue
-			}
-			neighbours.Add(neighbour)
-			otherNeighbours.Add(pt)
-		}
-		graph[pt] = neighbours
+		graph.add(pt)
 	}
 	return graph
 }
@@ -91,6 +95,19 @@ var getters = []GetterFunc{
 	func(p Point3) int { return p.z },
 }
 
+func allPoints(mins []int, maxs []int) []Point3 {
+	total := (maxs[0] - mins[0]) * (maxs[1] - mins[1]) * (maxs[2] - mins[2])
+	points := make([]Point3, 0, total)
+	for x := mins[0]; x <= maxs[0]; x++ {
+		for y := mins[1]; y <= maxs[1]; y++ {
+			for z := mins[2]; z <= maxs[2]; z++ {
+				points = append(points, Point3{x, y, z})
+			}
+		}
+	}
+	return points
+}
+
 func part2(lines []string) {
 	graph := readGraph(lines)
 	mins := lo.Map(getters, func(getter GetterFunc, _ int) int {
@@ -106,4 +123,23 @@ func part2(lines []string) {
 
 	fmt.Println(mins)
 	fmt.Println(maxs)
+
+	// Construct a parallel graph of the gaps between the cubes.
+	gaps := make(Graph)
+	for _, pt := range allPoints(mins, maxs) {
+		if _, found := graph[pt]; found {
+			continue
+		}
+		gaps.add(pt)
+	}
+
+	// Find all the gaps that are connected to the outside.
+	connected := make(map[Point3]bool)
+	todo := lib.NewQueue[Point3]()
+	unknown := lib.NewSet(lo.Keys(gaps)...)
+
+
+
 }
+
+func popOne[T comparable](s lib.
