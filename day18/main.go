@@ -69,8 +69,18 @@ func (g Graph) add(p Point3) {
 	g[p] = neighbours
 }
 
+func (g Graph) neighbours(p Point3) []Point3 {
+	var result []Point3
+	for _, n := range p.neighbours() {
+		if _, found := g[n]; found {
+			result = append(result, n)
+		}
+	}
+	return result
+}
+
 func readGraph(lines []string) Graph {
-	graph := make(map[Point3]lib.Set[Point3], len(lines))
+	graph := make(Graph, len(lines))
 	for _, line := range lines {
 		pt := readPoint(line)
 		graph.add(pt)
@@ -134,12 +144,76 @@ func part2(lines []string) {
 	}
 
 	// Find all the gaps that are connected to the outside.
-	connected := make(map[Point3]bool)
-	todo := lib.NewQueue[Point3]()
+	connected := lib.NewSet[Point3]()
 	unknown := lib.NewSet(lo.Keys(gaps)...)
 
+	for unknown.Len() > 0 {
+		cur := popOne(unknown)
+		if connected.Has(cur) {
+			continue
+		}
+		if outside(cur, mins, maxs) {
+			connected.Add(cur)
+			continue
+		}
+		todo := lib.NewSet(cur)
+		done := lib.NewSet[Point3]()
 
+		for todo.Len() > 0 {
+			item := popOne(todo)
+			for _, neighbour := range gaps.neighbours(item) {
 
+				if connected.Has(neighbour) {
+					// A neighbour is connected to the outside, so we are
+					// too.
+					connected.Add(item)
+					break
+				}
+				if outside(neighbour, mins, maxs) {
+					connected.Add(neighbour)
+					connected.Add(item)
+					break
+				}
+				if !done.Has(neighbour) {
+					todo.Add(neighbour)
+				}
+			}
+			done.Add(item)
+		}
+	}
+	// connected should only contain the gaps that are connected to
+	// the outside.
+	fmt.Println("connected", connected.Len())
+	left, _ := lo.Difference(lo.Keys(gaps), lo.Keys(connected))
+	fmt.Println("left", left)
+
+	total := 0
+	for _, pt := range lo.Keys(graph) {
+		for _, neighbour := range pt.neighbours() {
+			if _, found := graph[neighbour]; found {
+				continue
+			}
+			if outside(neighbour, mins, maxs) || connected.Has(neighbour) {
+				total++
+			}
+		}
+	}
+	fmt.Println(total)
 }
 
-func popOne[T comparable](s lib.
+func popOne[T comparable](s lib.Set[T]) T {
+	for key := range s {
+		s.Remove(key)
+		return key
+	}
+	panic("empty set")
+}
+
+func outside(pt Point3, mins, maxs []int) bool {
+	for i, getter := range getters {
+		if getter(pt) <= mins[i] || getter(pt) >= maxs[i] {
+			return true
+		}
+	}
+	return false
+}
